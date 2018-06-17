@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-from torch.autograd import Variable
 
 class inception(nn.Module):
 	def __init__(self, input_size, config):
@@ -40,15 +39,3 @@ class inception(nn.Module):
 			ret.append(conv(x))
 		# print(torch.cat(ret,dim=1))
 		return torch.cat(ret,dim=1)
-
-if __name__ == '__main__':
-	testModule = inception(256, [[64], [3,32,64], [5,32,64], [7,32,64]])
-	print(testModule)
-	x = Variable(torch.rand(2,256,125,125))
-	# conv = nn.Conv2d(256, 32,1)
-	# norm = nn.BatchNorm2d(32,affine=False)
-	# relu = nn.ReLU(True)
-	# conv2 = nn.Conv2d(32,64,3,padding=1)
-	# norm2 = nn.BatchNorm2d(64,affine=False)
-	# print(relu(norm2(conv2(relu(norm(conv(x)))))))
-	print(testModule(x))

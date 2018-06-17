@@ -9,15 +9,6 @@ from torchvision import transforms
 from PIL import Image
 
 
-# _batch_target_relative_depth_gpu = {}
-# for i in range(0,g_args.bs):#g_args is from main.py
-# 	_batch_target_relative_depth_gpu[i] = {}
-# 	_batch_target_relative_depth_gpu[i]['y_A'] = torch.Tensor().cuda()
-# 	_batch_target_relative_depth_gpu[i]['x_A'] = torch.Tensor().cuda()
-# 	_batch_target_relative_depth_gpu[i]['y_B'] = torch.Tensor().cuda()
-# 	_batch_target_relative_depth_gpu[i]['x_B'] = torch.Tensor().cuda()
-# 	_batch_target_relative_depth_gpu[i]['ordianl_relation'] = torch.Tensor().cuda()
-
 class DataLoader(object):
 	"""docstring for DataLoader"""
 	def __init__(self, relative_depth_filename):
@@ -26,8 +17,6 @@ class DataLoader(object):
 		self.parse_depth(relative_depth_filename)
 		self.data_ptr_relative_depth = DataPointer(self.n_relative_depth_sample)
 		print("DataLoader init: \n \t{} relative depth samples \n ".format(self.n_relative_depth_sample))
-
-
 
 	def parse_relative_depth_line(self, line):
 		splits = line.split(',')
@@ -38,44 +27,31 @@ class DataLoader(object):
 		return sample
 
 	def parse_csv(self, filename, parsing_func):
-		_handle = {}
-
+		handle = {}
 		if filename == None:
-			return _handle
+			return handle
 
-		_n_lines = 0
 		f = open(filename, 'r')
-		for l in f:
-			_n_lines+=1
+		sample_idx = 0
+		for this_line in f:
+			if this_line != '':
+				handle[sample_idx] = parsing_func(this_line)
+				sample_idx += 1
 		f.close()
 
-		csv_file_handle = open(filename, 'r')
-		_sample_idx = 0
-		print(_n_lines)
-		while _sample_idx < _n_lines:
-			this_line = csv_file_handle.readline()
-			if this_line != '':
-				_handle[_sample_idx] = parsing_func(this_line)
-				_sample_idx+=1
-			else:
-				_n_lines-=1
-				print('empty')
-
-		csv_file_handle.close()
-
-		return _handle
+		return handle
 
 	def parse_depth(self, relative_depth_filename):
 		if relative_depth_filename is not None:
-			_simplified_relative_depth_filename = relative_depth_filename.replace('.csv', '_name.csv')
-			if os.path.isfile(_simplified_relative_depth_filename):
-				print(_simplified_relative_depth_filename+" already exists.")
+			simplified_relative_depth_filename = relative_depth_filename.replace('.csv', '_name.csv')
+			if os.path.isfile(simplified_relative_depth_filename):
+				print(simplified_relative_depth_filename+" already exists.")
 			else:
-				command = "grep '.png' "+ relative_depth_filename + " > " + _simplified_relative_depth_filename
+				command = "grep '.png' "+ relative_depth_filename + " > " + simplified_relative_depth_filename
 				print("executing:{}".format(command))
 				os.system(command)
 
-			self.relative_depth_handle = self.parse_csv(_simplified_relative_depth_filename, self.parse_relative_depth_line)
+			self.relative_depth_handle = self.parse_csv(simplified_relative_depth_filename, self.parse_relative_depth_line)
 
 			hdf5_filename = relative_depth_filename.replace('.csv', '.h5')
 			self.relative_depth_handle['hdf5_handle'] = h5py.File(hdf5_filename, 'r')
@@ -111,13 +87,9 @@ class DataLoader(object):
 		_batch_target_relative_depth_gpu = {}
 		_batch_target_relative_depth_gpu['n_sample'] = n_depth
 
-
-
 		loader = transforms.Compose([
-			transforms.ToTensor(),
-			# transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5)) # may not need this
+			transforms.ToTensor()
 			])
-		# loader = transforms.ToTensor()
 
 		for i in range(0,n_depth):
 			idx = depth_indices[i]

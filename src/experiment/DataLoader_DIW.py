@@ -10,6 +10,7 @@ from torchvision import transforms
 from PIL import Image
 from math import floor
 
+
 class DataLoader(object):
 	"""docstring for DataLoader"""
 	def __init__(self, relative_depth_filename):
