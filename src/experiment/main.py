@@ -12,13 +12,14 @@ from DataLoader_DIW import DataLoader as DataLoader_DIW
 from DataLoader import DataLoader
 from validation_crit.validate_crit_DIW import *
 from validation_crit.validate_crit1 import *
+from models.hourglass import *
 
 
 def parseArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', default='hourglass', help='model file definition')
     parser.add_argument('-bs',default=4, type=int, help='batch size')
-    parser.add_argument('-it', default=0, type=int, help='Iterations')
+    parser.add_argument('-it', default=100000, type=int, help='Iterations')
     parser.add_argument('-lt', default=10, type=int, help='Loss file saving refresh interval (seconds)')
     parser.add_argument('-mt', default=3000 , type=int, help='Model saving interval (iterations)')
     parser.add_argument('-et', default=1000 , type= int, help='Model evaluation interval (iterations)')
@@ -34,7 +35,7 @@ def parseArgs():
     return args
 
 
-def save_loss_accuracy(args, t_loss, t_WKDR, v_loss, v_WKDR):
+def save_loss_accuracy(args, g_model, t_loss, t_WKDR, v_loss, v_WKDR):
     _v_loss_tensor = torch.Tensor(v_loss)
     _t_loss_tensor = torch.Tensor(t_loss)
     _v_WKDR_tensor = torch.Tensor(v_WKDR)
@@ -54,13 +55,13 @@ def save_loss_accuracy(args, t_loss, t_WKDR, v_loss, v_WKDR):
 
 def save_model(model, directory, current_iter, config):
     model.config = config
-    torch.save(model, directory+'/model_period'+str(model.period)+'_'+str(current_iter)+'.pt')
+    torch.save(model, directory+'/model_period'+str(model.period)+'_'+str(current_iter)+'.pth')
 
 
 def save_best_model(model, directory, config, iteration):
     model.config = config
     model.iter = iteration
-    torch.save(model, os.path.join(directory,'Best_model_period'+str(model.period)+'.pt'))
+    torch.save(model, os.path.join(directory,'Best_model_period'+str(model.period)+'.pth'))
 
 
 if __name__ == '__main__':
@@ -70,7 +71,7 @@ if __name__ == '__main__':
     # --- dataloader ---
     train_depth_path = None
     valid_depth_path = None
-    folderpath = '../../data/'
+    folderpath = '/home/jim/Documents/NYU/data/'
     # arguments check
     if args.t_depth_file != '':
         train_depth_path = folderpath + args.t_depth_file
@@ -105,15 +106,11 @@ if __name__ == '__main__':
         args.rundir = os.path.join('../results/', args.m, str(job_name))
     if not os.path.exists(args.rundir):
         os.mkdir(args.rundir)
-    torch.save(args, args.rundir+'/args.pt')
+    torch.save(args, args.rundir+'/args.pth')
 
     # Model
     config = {}
-    # temporary solution
-    if args.m == 'hourglass':
-        from models.hourglass import *
     if args.start_from != '':
-        # import cudnn
         print(os.path.join(args.rundir, args.start_from))
         g_model = torch.load(os.path.join(args.rundir , args.start_from))
         if g_model.period is None:
@@ -129,11 +126,6 @@ if __name__ == '__main__':
         print("Error: no criterion specified!!!!!!!")
         sys.exit(1)
 
-    # get_depth_from_model_output = f_depth_from_model_output()
-    # if get_depth_from_model_output is None:
-    #     print('Error: get_depth_from_model_output is undefined!!!!!!!')
-    #     sys.exit(1)
-
     g_criterion = get_criterion()
     g_model = g_model.cuda()
     if args.optim == 'RMSprop':
@@ -143,7 +135,6 @@ if __name__ == '__main__':
         optimizer = optim.Adam(g_model.parameters(), lr=args.lr)
         print('Using Adam')
 
-    feval = default_feval
     best_valist_set_error_rate = 1.0
     train_loss = []
     train_WKDR = []
@@ -161,10 +152,8 @@ if __name__ == '__main__':
         batch_loss.backward()
         optimizer.step()
         total_loss += batch_loss.item()
-        # end = time.time()
         print(('loss = {}'.format(batch_loss.item())))
         lfile.write('loss = {}\n'.format(batch_loss.item()))
-        # print('time_used = {}'.format(end-start))
 
         if i % args.mt == 0 and i!=0:
             print('Saving model at iteration {}...'.format(i))
@@ -182,7 +171,7 @@ if __name__ == '__main__':
             train_WKDR.append(train_eval_WKDR)
             valid_WKDR.append(valid_eval_WKDR)
 
-            save_loss_accuracy(args, train_loss, train_WKDR, valid_loss, valid_WKDR)
+            save_loss_accuracy(args, g_model, train_loss, train_WKDR, valid_loss, valid_WKDR)
 
             if best_valist_set_error_rate > valid_eval_WKDR:
                 best_valist_set_error_rate = valid_eval_WKDR
