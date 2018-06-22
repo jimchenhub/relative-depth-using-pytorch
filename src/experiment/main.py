@@ -1,17 +1,15 @@
 import os
 import sys
-import h5py
 import argparse
-import time
+import datetime
 import shutil
 
+import h5py
 import torch
 import torch.optim as optim
 
 from DataLoader_DIW import DataLoader as DataLoader_DIW
 from DataLoader import DataLoader
-from validation_crit.validate_crit_DIW import *
-from validation_crit.validate_crit1 import *
 from models.hourglass import *
 
 
@@ -86,11 +84,13 @@ if __name__ == '__main__':
         sys.exit(1)
     # dataloader
     if args.diw:
-        train_loader = DataLoader_DIW(train_depth_path)
-        valid_loader = DataLoader_DIW(valid_depth_path)
+        train_loader = DataLoader_DIW(train_depth_path, folderpath+"train_labels/")
+        valid_loader = DataLoader_DIW(valid_depth_path, folderpath+"val_labels/")
+        from validation_crit.validate_crit_DIW import *
     else:
-        train_loader = DataLoader(train_depth_path)
-        valid_loader = DataLoader(valid_depth_path)
+        train_loader = DataLoader(train_depth_path, folderpath+"train_labels/")
+        valid_loader = DataLoader(valid_depth_path, folderpath+"val_labels/")
+        from validation_crit.validate_crit1 import *
     
     if args.it == 0:
         args.it = int(args.ep * (train_loader.n_relative_depth_sample)/args.bs)
@@ -108,7 +108,7 @@ if __name__ == '__main__':
         os.mkdir(args.rundir)
     torch.save(args, args.rundir+'/args.pth')
 
-    # Model
+    # --- Model and criterion ---
     config = {}
     if args.start_from != '':
         print(os.path.join(args.rundir, args.start_from))
@@ -135,13 +135,13 @@ if __name__ == '__main__':
         optimizer = optim.Adam(g_model.parameters(), lr=args.lr)
         print('Using Adam')
 
+    # --- Run Iteration ---
     best_valist_set_error_rate = 1.0
     train_loss = []
     train_WKDR = []
     valid_loss = []
     valid_WKDR = []
     lfile = open(args.rundir+'/training_loss_period'+str(g_model.period)+'.txt', 'w')
-
     total_loss = 0.0
     for i in range(0,args.it):
         # one step
@@ -152,8 +152,12 @@ if __name__ == '__main__':
         batch_loss.backward()
         optimizer.step()
         total_loss += batch_loss.item()
-        print(('loss = {}'.format(batch_loss.item())))
-        lfile.write('loss = {}\n'.format(batch_loss.item()))
+        if i % 20 == 0:
+            t_now = datetime.datetime.now()
+            t = t_now.strftime("%Y-%m-%d %H:%M:%S")
+            print(t)
+        print(('iteration {}, loss = {}'.format(i, batch_loss.item())))
+        lfile.write('iteration {}, loss = {}\n'.format(i, batch_loss.item()))
 
         if i % args.mt == 0 and i!=0:
             print('Saving model at iteration {}...'.format(i))

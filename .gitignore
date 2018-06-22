@@ -7,3 +7,4 @@ src/experiment/DIW_train_val
 *.zip
 *.pyc
 .idea/
+src/results/
