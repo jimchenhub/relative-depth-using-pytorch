@@ -8,16 +8,17 @@ from torchvision import models
 class ResidualConv(nn.Module):
     def __init__(self, in_channel):
         super(ResidualConv, self).__init__()
+        self.trans = nn.Conv2d(in_channel, 256, 3, padding=1)
         self.conv = nn.Sequential(
                         nn.ReLU(True),
-                        nn.Conv2d(in_channel, 256, 3, padding=1),
+                        nn.Conv2d(256, 256, 3, padding=1),
                         nn.ReLU(True),
                         nn.Conv2d(256, 256, 3, padding=1)
                     )
 
     def forward(self, x):
-        ret = [self.conv(x), x]
-        return torch.cat(ret, dim=1)
+        x = self.trans(x)
+        return self.conv(x) + x
 
 
 class ConvUpsampling(nn.Module):
@@ -26,15 +27,14 @@ class ConvUpsampling(nn.Module):
         self.convup = ResidualConv(in_channel)
 
     def forward(self, x):
-        a = F.upsample(self.convup(x), scale_factor=2, mode="bilinear")
-        return a
+       return F.upsample(self.convup(x), scale_factor=2, mode="bilinear")
 
 
 class FeatureFusion(nn.Module):
-    def __init__(self, input1, input2):
+    def __init__(self, input1):
         super(FeatureFusion, self).__init__()
         self.left = ResidualConv(input1)
-        self.convup = ConvUpsampling(input1)
+        self.convup = ConvUpsampling(256)
 
     def forward(self, left_x, top_x):
         return self.convup(self.left(left_x) + top_x)
@@ -60,9 +60,9 @@ class ReDModel(nn.Module):
         out_dim1 = list(self.layer1.modules())[-2].weight.size()[0]
         self.up4 = ConvUpsampling(out_dim4)
         # fusion modules
-        self.fu1 = FeatureFusion(out_dim1, 256)
-        self.fu2 = FeatureFusion(out_dim2, 256)
-        self.fu3 = FeatureFusion(out_dim3, 256)
+        self.fu1 = FeatureFusion(out_dim1)
+        self.fu2 = FeatureFusion(out_dim2)
+        self.fu3 = FeatureFusion(out_dim3)
         # adaptive output layer
         self.adapt = nn.Sequential(
             nn.Conv2d(256, 128, 3, padding=1),
