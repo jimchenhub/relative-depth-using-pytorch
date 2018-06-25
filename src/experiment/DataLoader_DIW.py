@@ -13,9 +13,10 @@ from math import floor
 
 class DataLoader(object):
     """docstring for DataLoader"""
-    def __init__(self, relative_depth_filename, folder_path):
+    def __init__(self, relative_depth_filename, folder_path, symbol):
         super(DataLoader, self).__init__()
         print(">>>>>>>>>>>>>>>>> Using DataLoader")
+        self.symbol = symbol
         self.folder_path = folder_path
         self.parse_depth(relative_depth_filename)
         self.data_ptr_relative_depth = DataPointer(self.n_relative_depth_sample)
@@ -119,13 +120,17 @@ class DataLoader(object):
             n_depth = 0
 
         batch_size = n_depth
-        color = torch.Tensor(batch_size, 3, g_input_height, g_input_width)
+        if self.symbol == "hourglass":
+            new_height, new_width = g_input_height, g_input_width
+        elif self.symbol == "ReD":
+            new_height, new_width = g_input_height_ReD, g_input_width_ReD
+        color = torch.Tensor(batch_size, 3, new_height, new_width)
 
         _batch_target_relative_depth_gpu = {}
         _batch_target_relative_depth_gpu['n_sample'] = n_depth
 
         loader = transforms.Compose([
-            transforms.Scale((g_input_width, g_input_height)),
+            transforms.Resize((new_height, new_width)),
             transforms.ToTensor(),
             # transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5)) # may not need this
             ])

@@ -10,12 +10,11 @@ import torch.optim as optim
 
 from DataLoader_DIW import DataLoader as DataLoader_DIW
 from DataLoader import DataLoader
-from models.hourglass import *
 
 
 def parseArgs():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m', default='hourglass', help='model file definition')
+    parser.add_argument('-m', default='ReD', help='model file definition')
     parser.add_argument('-bs',default=4, type=int, help='batch size')
     parser.add_argument('-it', default=100000, type=int, help='Iterations')
     parser.add_argument('-lt', default=10, type=int, help='Loss file saving refresh interval (seconds)')
@@ -84,12 +83,12 @@ if __name__ == '__main__':
         sys.exit(1)
     # dataloader
     if args.diw:
-        train_loader = DataLoader_DIW(train_depth_path, folderpath+"train_labels/")
-        valid_loader = DataLoader_DIW(valid_depth_path, folderpath+"val_labels/")
+        train_loader = DataLoader_DIW(train_depth_path, folderpath+"train_labels/", symbol=args.m)
+        valid_loader = DataLoader_DIW(valid_depth_path, folderpath+"val_labels/", symbol=args.m)
         from validation_crit.validate_crit_DIW import *
     else:
-        train_loader = DataLoader(train_depth_path, folderpath+"train_labels/")
-        valid_loader = DataLoader(valid_depth_path, folderpath+"val_labels/")
+        train_loader = DataLoader(train_depth_path, folderpath+"train_labels/", symbol=args.m)
+        valid_loader = DataLoader(valid_depth_path, folderpath+"val_labels/", symbol=args.m)
         from validation_crit.validate_crit1 import *
     
     if args.it == 0:
@@ -109,6 +108,12 @@ if __name__ == '__main__':
     torch.save(args, args.rundir+'/args.pth')
 
     # --- Model and criterion ---
+    # if args.m == "hourglass":
+    #     from models.hourglass import *
+    # elif args.m == "ReD":
+    #     from models.ReDWeb_network import *
+    from models.hourglass import *
+    from models.ReDWeb_network import get_criterion
     config = {}
     if args.start_from != '':
         print(os.path.join(args.rundir, args.start_from))
@@ -122,7 +127,7 @@ if __name__ == '__main__':
         g_model.period = 1
     config['learningRate'] = args.lr
 
-    if get_criterion is None: #Todo
+    if get_criterion is None:
         print("Error: no criterion specified!!!!!!!")
         sys.exit(1)
 

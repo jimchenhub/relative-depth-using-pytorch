@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torchvision import models
-# from .criterion.relative_depth import relative_depth_crit
+from .criterion.relative_depth import relative_depth_crit
 
 
 class ResidualConv(nn.Module):
@@ -40,9 +40,9 @@ class FeatureFusion(nn.Module):
         return self.convup(self.left(left_x) + top_x)
 
 
-class ReDModel(nn.Module):
+class Model(nn.Module):
     def __init__(self):
-        super(ReDModel, self).__init__()
+        super(Model, self).__init__()
         # torchvision model
         model_resnet50 = models.resnet50(pretrained=True)
         self.conv1 = model_resnet50.conv1
@@ -88,15 +88,15 @@ class ReDModel(nn.Module):
 
 
 def get_model():
-    return ReDModel().cuda()
+    return Model().cuda()
 
 
-# def get_criterion():
-#     return relative_depth_crit()
+def get_criterion():
+    return relative_depth_crit(ranking=True)
 
         
 if __name__ == '__main__':
-    model = ReDModel().cuda()
+    model = Model().cuda()
     inputs = torch.zeros((1, 3, 224, 224), device=torch.device("cuda:0"))
     model.train(True)
     output = model(inputs)
