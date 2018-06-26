@@ -80,7 +80,7 @@ class DataLoader(object):
         _batch_target_relative_depth_gpu['n_sample'] = n_depth
 
         transform = transforms.Compose([
-            # transforms.Resize((new_height, new_width)),
+            transforms.Resize((new_height, new_width)),
             transforms.ToTensor()
             ])
 
@@ -98,16 +98,19 @@ class DataLoader(object):
             # image = Variable(image, require_grad=True)
             color[i,:,:,:].copy_(image)
 
+            old_width, old_height = image.size
+            x_ratio, y_ratio = new_height/old_height, new_width/old_width
+
             _hdf5_offset = int(5*idx)
             _this_sample_hdf5 = self.relative_depth_handle['hdf5_handle']['/data'][_hdf5_offset:_hdf5_offset+5,0:n_point]
 
             assert(_this_sample_hdf5.shape[0] == 5)
             assert(_this_sample_hdf5.shape[1] == n_point)
 
-            _batch_target_relative_depth_gpu[i]['y_A']= torch.Tensor(torch.from_numpy(_this_sample_hdf5[0]-1)).cuda()
-            _batch_target_relative_depth_gpu[i]['x_A']= torch.Tensor(torch.from_numpy(_this_sample_hdf5[1]-1)).cuda()
-            _batch_target_relative_depth_gpu[i]['y_B']= torch.Tensor(torch.from_numpy(_this_sample_hdf5[2]-1)).cuda()
-            _batch_target_relative_depth_gpu[i]['x_B']= torch.Tensor(torch.from_numpy(_this_sample_hdf5[3]-1)).cuda()            
+            _batch_target_relative_depth_gpu[i]['y_A']= torch.Tensor(int(y_ratio*torch.from_numpy(_this_sample_hdf5[0]-1))).cuda()
+            _batch_target_relative_depth_gpu[i]['x_A']= torch.Tensor(int(x_ratio*torch.from_numpy(_this_sample_hdf5[1]-1))).cuda()
+            _batch_target_relative_depth_gpu[i]['y_B']= torch.Tensor(int(y_ratio*torch.from_numpy(_this_sample_hdf5[2]-1))).cuda()
+            _batch_target_relative_depth_gpu[i]['x_B']= torch.Tensor(int(x_ratio*torch.from_numpy(_this_sample_hdf5[3]-1))).cuda()            
             _batch_target_relative_depth_gpu[i]['ordianl_relation']= torch.Tensor(torch.from_numpy(_this_sample_hdf5[4])).cuda()
             _batch_target_relative_depth_gpu[i]['n_point'] = n_point
 
