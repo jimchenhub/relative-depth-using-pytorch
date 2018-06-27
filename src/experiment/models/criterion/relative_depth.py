@@ -49,14 +49,14 @@ class relative_depth_crit(nn.Module):
             w = np.zeros(len(all_loss))  # weight
             for l in range(len(all_loss)):
                 if all_ground_truth_arr[l] != 0 and all_loss[l] > threshold_loss or all_ground_truth_arr[l] == 0:
-                    w[l] = 1
+                    w[l] = 1.0
                 else:
-                    w[l] = 0
+                    w[l] = 0.0
             w = torch.Tensor(w).to(torch.device("cuda:0"))
             all_loss *= w
-
+        all_loss /= n_point_total
         self.output += torch.sum(all_loss)
-        return self.output/n_point_total
+        return self.output
 
 
 if __name__ == '__main__':

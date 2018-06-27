@@ -16,7 +16,7 @@ def parseArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', default='ReD', help='model file definition')
     parser.add_argument('-bs',default=4, type=int, help='batch size')
-    parser.add_argument('-it', default=100000, type=int, help='Iterations')
+    parser.add_argument('-it', default=50000, type=int, help='Iterations')
     parser.add_argument('-lt', default=10, type=int, help='Loss file saving refresh interval (seconds)')
     parser.add_argument('-mt', default=3000 , type=int, help='Model saving interval (iterations)')
     parser.add_argument('-et', default=1000 , type= int, help='Model evaluation interval (iterations)')
@@ -108,12 +108,12 @@ if __name__ == '__main__':
     torch.save(args, args.rundir+'/args.pth')
 
     # --- Model and criterion ---
-    # if args.m == "hourglass":
-    #     from models.hourglass import *
-    # elif args.m == "ReD":
-    #     from models.ReDWeb_network import *
-    from models.hourglass import *
-    from models.ReDWeb_network import get_criterion
+    if args.m == "hourglass":
+        from models.hourglass import *
+    elif args.m == "ReD":
+        from models.ReDWeb_network import *
+    # from models.hourglass import *
+    from models.hourglass import get_criterion
     config = {}
     if args.start_from != '':
         print(os.path.join(args.rundir, args.start_from))
@@ -168,20 +168,20 @@ if __name__ == '__main__':
             print('Saving model at iteration {}...'.format(i))
             save_model(g_model, args.rundir, i, config)
 
-        if i % args.et == 0:
-            print('Evaluatng at iteration {}'.format(i))
-            train_eval_loss, train_eval_WKDR = evaluate(train_loader, g_model, g_criterion, 100) #TODO
-            valid_eval_loss, valid_eval_WKDR = evaluate(valid_loader, g_model, g_criterion, 100)
-            print("train_eval_loss:",train_eval_loss, "; train_eval_WKDR:" ,train_eval_WKDR)
-            print("valid_eval_loss:", valid_eval_loss, "; valid_eval_WKDR:", valid_eval_WKDR)
-
-            train_loss.append(batch_loss.item())
-            valid_loss.append(valid_eval_loss)
-            train_WKDR.append(train_eval_WKDR)
-            valid_WKDR.append(valid_eval_WKDR)
-
-            save_loss_accuracy(args, g_model, train_loss, train_WKDR, valid_loss, valid_WKDR)
-
-            if best_valist_set_error_rate > valid_eval_WKDR:
-                best_valist_set_error_rate = valid_eval_WKDR
-                save_best_model(g_model, args.rundir, config, i)
+        # if i % args.et == 0:
+        #     print('Evaluatng at iteration {}'.format(i))
+        #     train_eval_loss, train_eval_WKDR = evaluate(train_loader, g_model, g_criterion, 100) #TODO
+        #     valid_eval_loss, valid_eval_WKDR = evaluate(valid_loader, g_model, g_criterion, 100)
+        #     print("train_eval_loss:",train_eval_loss, "; train_eval_WKDR:" ,train_eval_WKDR)
+        #     print("valid_eval_loss:", valid_eval_loss, "; valid_eval_WKDR:", valid_eval_WKDR)
+        #
+        #     train_loss.append(batch_loss.item())
+        #     valid_loss.append(valid_eval_loss)
+        #     train_WKDR.append(train_eval_WKDR)
+        #     valid_WKDR.append(valid_eval_WKDR)
+        #
+        #     save_loss_accuracy(args, g_model, train_loss, train_WKDR, valid_loss, valid_WKDR)
+        #
+        #     if best_valist_set_error_rate > valid_eval_WKDR:
+        #         best_valist_set_error_rate = valid_eval_WKDR
+        #         save_best_model(g_model, args.rundir, config, i)

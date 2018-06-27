@@ -129,7 +129,7 @@ class DataLoader(object):
         _batch_target_relative_depth_gpu = {}
         _batch_target_relative_depth_gpu['n_sample'] = n_depth
 
-        loader = transforms.Compose([
+        transform = transforms.Compose([
             transforms.Resize((new_height, new_width)),
             transforms.ToTensor(),
             # transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5)) # may not need this
@@ -144,7 +144,8 @@ class DataLoader(object):
             n_point = self.relative_depth_handle[chosen_idx]['n_point']
 
             img = Image.open(img_name)
-            img = loader(img).float()
+            old_height, old_width = img.height, img.width
+            img = transform(img).float()
             if img.size()[0] == 1:
                 print(img_name, ' is gray')
                 color[i,0,:,:].copy_(img)
@@ -153,8 +154,14 @@ class DataLoader(object):
             else:
                 color[i,:,:,:].copy_(img)
 
+            x_ratio, y_ratio = new_height / old_height, new_width / old_width
+
             _line_idx = self.relative_depth_handle[chosen_idx]['img_filename_line_idx']+1
             y_A, x_A, y_B, x_B, ordi = self.parse_one_coordinate_line(csv_file_handle, _line_idx)
+            y_A = (y_ratio * y_A).round()
+            x_A = (x_ratio * x_A).round()
+            y_B = (y_ratio * y_B).round()
+            x_B = (x_ratio * x_B).round()
 
             _batch_target_relative_depth_gpu[i]['y_A'] = torch.autograd.Variable(torch.Tensor([y_A])).cuda()
             _batch_target_relative_depth_gpu[i]['x_A'] = torch.autograd.Variable(torch.Tensor([x_A])).cuda()

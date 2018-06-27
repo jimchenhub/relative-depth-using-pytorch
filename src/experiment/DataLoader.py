@@ -69,11 +69,11 @@ class DataLoader(object):
             n_depth = 0
 
         batch_size = n_depth
-        # if self.symbol == "hourglass":
-        #     new_height, new_width = g_input_height, g_input_width
-        # elif self.symbol == "ReD":
-        #     new_height, new_width = g_input_height_ReD, g_input_width_ReD
-        new_height, new_width = g_input_height, g_input_width
+        if self.symbol == "hourglass":
+            new_height, new_width = g_input_height, g_input_width
+        elif self.symbol == "ReD":
+            new_height, new_width = g_input_height_ReD, g_input_width_ReD
+        # new_height, new_width = g_input_height, g_input_width
         color = torch.Tensor(batch_size, 3, new_height, new_width)
 
         _batch_target_relative_depth_gpu = {}
@@ -92,14 +92,14 @@ class DataLoader(object):
             n_point = self.relative_depth_handle[idx]['n_point']
             
             image = Image.open(img_name)
+            old_height, old_width = image.height, image.width
             image = transform(image).float()
             # print(image)
             # print(image.size())
             # image = Variable(image, require_grad=True)
             color[i,:,:,:].copy_(image)
 
-            old_width, old_height = image.size
-            x_ratio, y_ratio = new_height/old_height, new_width/old_width
+            x_ratio, y_ratio = new_width/old_width, new_height/old_height # special x and y axis
 
             _hdf5_offset = int(5*idx)
             _this_sample_hdf5 = self.relative_depth_handle['hdf5_handle']['/data'][_hdf5_offset:_hdf5_offset+5,0:n_point]
@@ -107,10 +107,10 @@ class DataLoader(object):
             assert(_this_sample_hdf5.shape[0] == 5)
             assert(_this_sample_hdf5.shape[1] == n_point)
 
-            _batch_target_relative_depth_gpu[i]['y_A']= torch.Tensor(int(y_ratio*torch.from_numpy(_this_sample_hdf5[0]-1))).cuda()
-            _batch_target_relative_depth_gpu[i]['x_A']= torch.Tensor(int(x_ratio*torch.from_numpy(_this_sample_hdf5[1]-1))).cuda()
-            _batch_target_relative_depth_gpu[i]['y_B']= torch.Tensor(int(y_ratio*torch.from_numpy(_this_sample_hdf5[2]-1))).cuda()
-            _batch_target_relative_depth_gpu[i]['x_B']= torch.Tensor(int(x_ratio*torch.from_numpy(_this_sample_hdf5[3]-1))).cuda()            
+            _batch_target_relative_depth_gpu[i]['y_A']= torch.Tensor((y_ratio*torch.from_numpy(_this_sample_hdf5[0]-1)).round()).cuda()
+            _batch_target_relative_depth_gpu[i]['x_A']= torch.Tensor((x_ratio*torch.from_numpy(_this_sample_hdf5[1]-1)).round()).cuda()
+            _batch_target_relative_depth_gpu[i]['y_B']= torch.Tensor((y_ratio*torch.from_numpy(_this_sample_hdf5[2]-1)).round()).cuda()
+            _batch_target_relative_depth_gpu[i]['x_B']= torch.Tensor((x_ratio*torch.from_numpy(_this_sample_hdf5[3]-1)).round()).cuda()
             _batch_target_relative_depth_gpu[i]['ordianl_relation']= torch.Tensor(torch.from_numpy(_this_sample_hdf5[4])).cuda()
             _batch_target_relative_depth_gpu[i]['n_point'] = n_point
 

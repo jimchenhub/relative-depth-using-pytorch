@@ -172,6 +172,49 @@ def normalize_output_depth_with_NYU_mean_std(input):
     return transformed_z
 
 
+def countNegative(pred, target):
+    valid_mask = (target>0).detach()
+    return sum(pred[valid_mask]<0)/(pred.size()[0])
+
+
+def countWrongRelativeDepth(pred, target, samplesNum=1000):
+    valid_mask = target>0
+    # valid_mask = valid_mask
+    predList = pred[valid_mask]
+    targetList = target[valid_mask]
+
+    random_index1 = np.random.randint(len(predList), size=samplesNum)
+    random_index2 = np.random.randint(len(predList), size=samplesNum)
+    # print(type(predList[random_index1]))
+    predSamples1 = np.array(predList[random_index1].cpu().detach().numpy())
+    predSamples2 = np.array(predList[random_index2].cpu().detach().numpy())
+
+    targetSamples1 = np.array(targetList[random_index1].cpu().detach().numpy())
+    targetSamples2 = np.array(targetList[random_index2].cpu().detach().numpy())
+
+    predLabel = np.zeros(samplesNum)
+    predLabel[predSamples1>predSamples2] = 1
+    predLabel[predSamples1<predSamples2] = -1
+
+    targetLabel = np.zeros(samplesNum)
+    targetLabel[targetSamples1>targetSamples2] = 1
+    targetLabel[targetSamples1<targetSamples2] = -1
+    #print(predSamples1)
+    #print(predSamples2)
+    #print(targetSamples1)
+    #print(targetSamples2)
+    #print(predLabel)
+    #print(targetLabel)
+    # a = predLabel!=targetLabel
+    # for i in range(samplesNum):
+    #     if a[i] == True:
+    #         print()
+    #         print(predSamples1[i], predSamples2[i])
+    #         print(targetSamples1[i], targetSamples2[i])
+    print(np.sum(predLabel!=targetLabel))
+    return np.sum(predLabel!=targetLabel)
+
+
 ### main entry ###
 
 parser = argparse.ArgumentParser()
@@ -243,7 +286,7 @@ t = transforms.Compose([
     transforms.ToTensor(),
     # transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))#may not need this
     ])
-
+all_num = 0
 for i in range(0, n_iter):
     print(i)
     img = Image.open(folder_path+data_handle[i]['img_filename']).convert('RGB')
@@ -288,6 +331,8 @@ for i in range(0, n_iter):
         # print(gtz)
 
         fmse[i], fmselog[i], flsi[i], fabsrel[i], fsqrrel[i] = metric_error(gtz,transformed_z_orig_size)
+        # test negative pair number
+        all_num += countWrongRelativeDepth(transformed_z_orig_size, torch.Tensor(gtz).to(torch.device("cuda:0")), 1000)
 
         gtz_h5_handle.close()
         
@@ -318,6 +363,8 @@ for i in range(0, n_iter):
 
         new_image.save(os.path.join(cmd_params.output_folder, str(i+1)+'.png'))
 
+all_num /= n_iter
+print(all_num/1000)
 
 WKDR = torch.mean(WKDR, 0)
 WKDR_eq = torch.mean(WKDR_eq, 0)
@@ -362,3 +409,4 @@ if cmd_params.mode == 'test':
     print("lsi:\t{}".format(sqrt(torch.mean(flsi))))
     print("absrel:\t{}".format(torch.mean(fabsrel)))
     print("sqrrel:\t{}".format(torch.mean(fsqrrel)))
+
